@@ -1,0 +1,118 @@
+<!-- 🔷 Complaint Header -->
+<div style="border-bottom: 2px solid #ccc; margin-bottom: 20px;">
+  <h1 style="margin-bottom: 5px;">📄 Complaint #<%= @complaint.id %></h1>
+  <p><strong>Category:</strong> <%= @complaint.category_type %></p>
+</div>
+
+<!-- 👥 User Assignments -->
+<div style="margin-bottom: 30px;">
+  <h3>User Assignments</h3>
+  <ul style="margin-left: 20px;">
+    <% @complaint.user_complaints.includes(:user).each do |uc| %>
+      <li>
+        <strong><%= uc.role.humanize %></strong> — <%= uc.user&.email || "User ##{uc.user_id}" %>
+      </li>
+    <% end %>
+  </ul>
+</div>
+
+<!-- 💬 Comments Section -->
+<div style="margin-bottom: 30px;">
+  <h2>💬 Comments</h2>
+  <% @complain_messages.each do |msg| %>
+    <div style="border: 1px solid #ccc; padding: 10px; border-radius: 6px; margin-bottom: 10px; background: #f9f9f9;">
+      <strong><%= msg.user&.email || "User ##{msg.user_id}" %>:</strong>
+      <p><%= msg.content %></p>
+      <% if current_user && (current_user.id == msg.user_id || current_user.admin?) %>
+        <%= link_to 'Delete', "/messages/#{msg.id}", method: :delete,
+                    data: { confirm: 'Delete this comment?' },
+                    style: "color: red; font-size: 0.9em;" %>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<!-- ➕ Add Comment -->
+<div style="margin-bottom: 40px;">
+  <h3>Add a Comment</h3>
+  <%= form_with(model: @new_message, url: messages_path, local: true) do |form| %>
+    <%= form.hidden_field :complaint_id, value: @complaint.id %>
+    <%= form.hidden_field :user_id, value: current_user.id %>
+
+    <p>
+      <%= form.label :content %><br>
+      <%= form.text_area :content, rows: 3, style: "width: 100%; border-radius: 5px;" %>
+    </p>
+
+    <%= form.submit "Post Comment", style: "padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px;" %>
+  <% end %>
+</div>
+
+<%= link_to '← Back to All Complaints', complaints_path, style: "text-decoration: none; color: #007bff;" %>
+
+<hr style="margin: 40px 0;">
+
+<!-- 🧩 Complaint Stage Section -->
+<% if @current_stage %>
+  <div style="margin-bottom: 40px;">
+    <h2>🚦 Current Stage: <%= @current_stage.stage.title %></h2>
+    <p style="color: #555;"><%= @current_stage.stage.description %></p>
+
+    <% if @user_role == "complainer" && @current_stage.stage_responses.empty? %>
+      <%= form_with(url: stage_responses_path, local: true) do |form| %>
+        <%= form.hidden_field :complaint_stage_id, value: @current_stage.id %>
+        <%= form.hidden_field :user_id, value: current_user.id %>
+
+        <% @current_stage.stage.stage_questions.each do |question| %>
+          <div style="margin-bottom: 20px;">
+            <p><strong><%= question.question_text %></strong></p>
+
+            <% case question.question_type %>
+            <% when "text" %>
+              <%= text_area_tag "responses[#{question.id}]", nil, style: "width: 100%; border-radius: 5px;" %>
+            <% when "tick_cross" %>
+              <%= radio_button_tag "responses[#{question.id}]", "Yes" %> Yes
+              <%= radio_button_tag "responses[#{question.id}]", "No" %> No
+            <% when "multiple_choice" %>
+              <%= radio_button_tag "responses[#{question.id}]", "Physical" %> Physical
+              <%= radio_button_tag "responses[#{question.id}]", "Verbal" %> Verbal
+              <%= radio_button_tag "responses[#{question.id}]", "Other" %> Other
+            <% else %>
+              <em>Unknown question type.</em>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%= form.submit "Submit Stage Responses", style: "padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px;" %>
+      <% end %>
+
+    <% elsif @user_role == "forwarded_to" && @current_stage.stage_responses.any? && !@current_stage.reviewer_approved %>
+      <h4>📥 Review Submitted Answers:</h4>
+      <ul style="margin-left: 20px;">
+        <% @current_stage.stage.stage_questions.each do |q| %>
+          <li>
+            <strong><%= q.question_text %>:</strong>
+            <%= @current_stage.stage_responses.find_by(stage_question: q)&.answer_text || "N/A" %>
+          </li>
+        <% end %>
+      </ul>
+
+      <%= form_with url: approve_stage_path(@current_stage), method: :patch, local: true do |form| %>
+        <p>
+          <%= form.label :forwarded_decision, "Your Decision / Remarks" %><br>
+          <%= form.text_area :forwarded_decision, rows: 3, style: "width: 100%; border-radius: 5px;" %>
+        </p>
+        <%= form.submit "Approve Stage", style: "padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px;" %>
+      <% end %>
+
+    <% elsif @user_role == "against" && @current_stage.reviewer_approved %>
+      <h4>📢 Forwarded Decision:</h4>
+      <p><%= @current_stage.forwarded_decision.presence || "No remarks provided." %></p>
+
+    <% else %>
+      <p style="color: #888;"><em>Waiting for form submission or review approval.</em></p>
+    <% end %>
+  </div>
+<% else %>
+  <h2 style="color: green;">✅ All stages completed</h2>
+<% end %>

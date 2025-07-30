@@ -1,0 +1,86 @@
+<h1>New Complaint</h1>
+
+<%= form_with(model: @complaint, local: true) do |form| %>
+  <p>
+    <%= form.label :category_type, "Select Complaint Category" %><br>
+    <%= form.select :category_type,
+                    options_for_select([
+                                         ['Harassment', 'harassment'],
+                                         ['Misconduct', 'misconduct'],
+                                         ['Bullying', 'bullying'],
+                                         ['Fraud', 'fraud']
+                                       ]),
+                    prompt: "Choose a category"
+    %>
+  </p>
+
+  <h3>User Assignments</h3>
+  <div id="user-assignments-wrapper">
+    <!-- Static Complainer -->
+    <div class="assignment">
+      <p>
+        <label>Complainer:</label><br>
+        <%= current_user.email %>
+        <input type="hidden" name="complaint[user_assignments][][user_id]" value="<%= current_user.id %>" />
+        <input type="hidden" name="complaint[user_assignments][][role]" value="complainer" />
+      </p>
+    </div>
+
+    <!-- Static Forwarded To -->
+    <div class="assignment">
+      <p>
+        <label>Forwarded To:</label><br>
+        <select name="complaint[user_assignments][][user_id]" id="forwarded_to_user">
+          <%= options_from_collection_for_select(@users.reject { |u| u.id == current_user.id }, :id, :email) %>
+        </select>
+        <input type="hidden" name="complaint[user_assignments][][role]" value="forwarded_to" />
+      </p>
+    </div>
+  </div>
+
+  <button type="button" onclick="addAgainst()">Add Against User</button>
+  <br><br>
+
+  <%= form.submit "Create Complaint" %>
+<% end %>
+
+<%= link_to 'Back', complaints_path %>
+
+<!-- 🧠 JS Logic -->
+<script>
+    const allUsers = <%= raw @users.reject { |u| u.id == current_user.id }.to_json(only: [:id], methods: [:email]) %>;
+
+    function getUsedUserIds() {
+        return Array.from(document.querySelectorAll("select[name='complaint[user_assignments][][user_id]']")).map(select => select.value);
+    }
+
+    function addAgainst() {
+        const wrapper = document.getElementById("user-assignments-wrapper");
+        const usedUserIds = getUsedUserIds();
+
+        const availableUsers = allUsers.filter(user => !usedUserIds.includes(String(user.id)));
+        if (availableUsers.length === 0) {
+            alert("No more available users to assign.");
+            return;
+        }
+
+        const userOptions = availableUsers.map(user =>
+            `<option value="${user.id}">${user.email}</option>`
+        ).join('');
+
+        const html = `
+      <div class="assignment">
+        <hr>
+        <p>
+          <label>Against User:</label><br>
+          <select name="complaint[user_assignments][][user_id]">
+            ${userOptions}
+          </select>
+          <input type="hidden" name="complaint[user_assignments][][role]" value="against" />
+        </p>
+      </div>
+    `;
+
+        wrapper.insertAdjacentHTML('beforeend', html);
+    }
+</script>

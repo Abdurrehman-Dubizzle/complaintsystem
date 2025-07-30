@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <%= javascript_importmap_tags %>
+  <title><%= content_for(:title) || "Complaintsystem" %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+  <%= javascript_importmap_tags %>
+</head>
+
+<body>
+<% flash.each do |type, msg| %>
+  <p style="color: red;"><%= msg %></p>
+<% end %>
+
+<% if user_signed_in? %>
+  <div style="margin-bottom: 10px;">
+    <%= link_to 'Complaints', complaints_path %> |
+    <%= link_to 'Dashboard', dashboard_path %> |
+    <%= link_to 'Logout', destroy_user_session_path, method: :delete %>
+    <% if current_user.designation == 'admin' %>
+      | <%= link_to 'Admin Page', admin_dashboard_path %>
+    <% end %>
+  </div>
+<% else %>
+  <%= link_to 'Login', new_user_session_path %> |
+  <%= link_to 'Sign Up', new_user_registration_path %>
+<% end %>
+
+<%= yield %>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<h1 style="margin-bottom: 20px;">📋 All Complaints</h1>
+
+<!-- 🔍 Search Form -->
+<%= form_with url: complaints_path, method: :get, local: true do %>
+  <div style="margin-bottom: 25px;">
+    <label style="font-weight: bold;" for="q">Search Complaints:</label><br>
+    <input type="text" name="q" id="q" value="<%= params[:q] %>" placeholder="Search by category or ID..."
+           style="padding: 6px 10px; width: 250px; border-radius: 5px; border: 1px solid #ccc;">
+    <input type="submit" value="Search"
+           style="padding: 6px 15px; background: #007bff; color: white; border: none; border-radius: 5px;">
+  </div>
+<% end %>
+
+<!-- 🧾 Complaints Table -->
+<table style="width: 100%; border-collapse: collapse;">
+  <thead>
+  <tr style="background-color: #f0f0f0;">
+    <th style="padding: 10px; border: 1px solid #ddd;">#ID</th>
+    <th style="padding: 10px; border: 1px solid #ddd;">Category</th>
+    <th style="padding: 10px; border: 1px solid #ddd;">Complainer</th>
+    <th style="padding: 10px; border: 1px solid #ddd;">Status</th>
+    <th style="padding: 10px; border: 1px solid #ddd;">Created At</th>
+    <th style="padding: 10px; border: 1px solid #ddd;"># Comments</th>
+    <th style="padding: 10px; border: 1px solid #ddd;">Actions</th>
+  </tr>
+  </thead>
+  <tbody>
+  <% if @complaints.any? %>
+    <% @complaints.each do |complaint| %>
+      <% complainer = complaint.user_complaints.find { |uc| uc.role == "complainer" }&.user %>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; border: 1px solid #ddd;"><%= complaint.id %></td>
+        <td style="padding: 10px; border: 1px solid #ddd;"><%= complaint.category_type.humanize %></td>
+        <td style="padding: 10px; border: 1px solid #ddd;"><%= complainer&.email || "N/A" %></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">
+          <% if complaint.status == "resolved" %>
+            <span style="color: green; font-weight: bold;">Resolved</span>
+          <% else %>
+            <span style="color: orange;">Open</span>
+          <% end %>
+        </td>
+        <td style="padding: 10px; border: 1px solid #ddd;"><%= complaint.created_at.strftime("%b %d, %Y") %></td>
+        <td style="padding: 10px; border: 1px solid #ddd;"><%= complaint.complain_messages.count %></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">
+          <%= link_to '🔍 Show', complaint_path(complaint),
+                      style: "margin-right: 10px; color: #007bff; text-decoration: none;" %>
+          <% if current_user.admin? %>
+            <%= link_to '🗑️ Delete', complaint_path(complaint), method: :delete,
+                        data: { confirm: 'Are you sure?' },
+                        style: "color: red; text-decoration: none;" %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  <% else %>
+    <tr>
+      <td colspan="7" style="padding: 20px; text-align: center; color: #777;">No complaints found.</td>
+    </tr>
+  <% end %>
+  </tbody>
+</table>
+
+<!-- ➕ New Complaint Button -->
+<div style="margin-top: 30px;">
+  <%= link_to '➕ New Complaint', new_complaint_path,
+              style: "padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 6px;" %>
+</div>
